@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Browser Swap</string>
+    <string>FreeVelja</string>
     <key>CFBundleDisplayName</key>
-    <string>Browser Swap</string>
+    <string>FreeVelja</string>
     <key>CFBundleIdentifier</key>
-    <string>com.zhangzheyuan.browser-swap</string>
+    <string>com.sindresorhus.Velja</string>
     <key>CFBundleExecutable</key>
-    <string>browser-swap</string>
+    <string>FreeVelja</string>
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundlePackageType</key>

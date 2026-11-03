@@ -108,7 +108,7 @@ final class BrowserStore: ObservableObject {
         config.activates = true
         for (target, urls) in byBrowser {
             NSWorkspace.shared.open(urls, withApplicationAt: target.url, configuration: config) { _, error in
-                if let error { NSLog("browser-swap: failed to open in \(target.name): \(error)") }
+                if let error { NSLog("FreeVelja: failed to open in \(target.name): \(error)") }
             }
         }
     }
@@ -171,10 +171,10 @@ struct ContentView: View {
 
             HStack {
                 if store.isDefault {
-                    Label("Browser Swap is the default browser", systemImage: "checkmark.circle.fill")
+                    Label("FreeVelja is the default browser", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
                 } else {
-                    Label("Browser Swap is not the default browser", systemImage: "exclamationmark.triangle.fill")
+                    Label("FreeVelja is not the default browser", systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
                     Spacer()
                     Button("Set as Default") { store.setSelfAsDefault() }
@@ -266,8 +266,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func promptToBecomeDefault() {
         let alert = NSAlert()
-        alert.messageText = "Make Browser Swap your default browser?"
-        alert.informativeText = "Browser Swap forwards links to whichever browser you pick in its dropdown, so you can switch browsers instantly."
+        alert.messageText = "Make FreeVelja your default browser?"
+        alert.informativeText = "FreeVelja forwards links to whichever browser you pick in its dropdown, so you can switch browsers instantly."
         alert.addButton(withTitle: "Set as Default")
         alert.addButton(withTitle: "Not Now")
         alert.showsSuppressionButton = true
@@ -284,7 +284,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private func showWindow() {
         if window == nil {
             let w = NSWindow(contentViewController: NSHostingController(rootView: ContentView()))
-            w.title = "Browser Swap"
+            w.title = "FreeVelja"
             w.styleMask = [.titled, .closable, .miniaturizable]
             w.isReleasedWhenClosed = false
             w.center()
@@ -298,7 +298,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     // Menu bar icon for quick switching.
     private func setupStatusItem() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "arrow.left.arrow.right.circle", accessibilityDescription: "Browser Swap")
+        item.button?.image = NSImage(systemSymbolName: "arrow.left.arrow.right.circle", accessibilityDescription: "FreeVelja")
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
@@ -318,11 +318,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         menu.addItem(.separator())
         if !store.isDefault {
-            let mi = NSMenuItem(title: "Set Browser Swap as Default…", action: #selector(makeDefault), keyEquivalent: "")
+            let mi = NSMenuItem(title: "Set FreeVelja as Default…", action: #selector(makeDefault), keyEquivalent: "")
             mi.target = self
             menu.addItem(mi)
         }
-        let open = NSMenuItem(title: "Open Browser Swap…", action: #selector(openWindow), keyEquivalent: "")
+        let open = NSMenuItem(title: "Open FreeVelja…", action: #selector(openWindow), keyEquivalent: "")
         open.target = self
         menu.addItem(open)
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -337,9 +337,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let appItem = NSMenuItem()
         main.addItem(appItem)
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "Hide Browser Swap", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "Hide FreeVelja", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Quit Browser Swap", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Quit FreeVelja", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
 
         let windowItem = NSMenuItem()
