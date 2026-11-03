@@ -25,9 +25,38 @@ final class BrowserStore: ObservableObject {
     }
     @Published var isDefault = false
 
+    static let maxRules = 20
+    private let rulesKey = "rules"
+    @Published var rules: [Rule] = [] {
+        didSet {
+            if let data = try? JSONEncoder().encode(rules) {
+                UserDefaults.standard.set(data, forKey: rulesKey)
+            }
+        }
+    }
+
     private init() {
         selectedID = UserDefaults.standard.string(forKey: selectedKey)
+        if let data = UserDefaults.standard.data(forKey: rulesKey),
+           let saved = try? JSONDecoder().decode([Rule].self, from: data) {
+            rules = saved
+        }
         refresh()
+    }
+
+    func addRule() {
+        guard rules.count < Self.maxRules else { return }
+        rules.append(Rule(browserID: selectedID))
+    }
+
+    /// First enabled rule (top to bottom) whose pattern matches and whose browser is installed;
+    /// otherwise the default selection.
+    func browser(for url: URL) -> Browser? {
+        let s = url.absoluteString
+        for rule in rules where rule.enabled && URLPattern.matches(rule.pattern, url: s) {
+            if let b = browsers.first(where: { $0.bundleID == rule.browserID }) { return b }
+        }
+        return selected ?? browsers.first
     }
 
     var selected: Browser? { browsers.first { $0.bundleID == selectedID } }
@@ -67,14 +96,20 @@ final class BrowserStore: ObservableObject {
     }
 
     func open(_ urls: [URL]) {
-        guard let target = selected ?? browsers.first else {
-            NSSound.beep()
-            return
+        var byBrowser: [Browser: [URL]] = [:]
+        for url in urls {
+            guard let target = browser(for: url) else {
+                NSSound.beep()
+                continue
+            }
+            byBrowser[target, default: []].append(url)
         }
         let config = NSWorkspace.OpenConfiguration()
         config.activates = true
-        NSWorkspace.shared.open(urls, withApplicationAt: target.url, configuration: config) { _, error in
-            if let error { NSLog("browser-swap: failed to open in \(target.name): \(error)") }
+        for (target, urls) in byBrowser {
+            NSWorkspace.shared.open(urls, withApplicationAt: target.url, configuration: config) { _, error in
+                if let error { NSLog("browser-swap: failed to open in \(target.name): \(error)") }
+            }
         }
     }
 }
@@ -100,6 +135,41 @@ struct ContentView: View {
             Divider()
 
             HStack {
+                Text("Rules").font(.headline)
+                Text("\(store.rules.count)/\(BrowserStore.maxRules)")
+                    .font(.callout).foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    store.addRule()
+                } label: {
+                    Label("Add Rule", systemImage: "plus")
+                }
+                .disabled(store.rules.count >= BrowserStore.maxRules)
+            }
+
+            if store.rules.isEmpty {
+                Text("No rules. Links not matching any rule open in the browser above.")
+                    .font(.callout).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, minHeight: 60)
+            } else {
+                List {
+                    ForEach($store.rules) { $rule in
+                        RuleRow(rule: $rule, browsers: store.browsers) {
+                            store.rules.removeAll { $0.id == rule.id }
+                        }
+                    }
+                    .onMove { store.rules.move(fromOffsets: $0, toOffset: $1) }
+                }
+                .frame(height: min(CGFloat(store.rules.count) * 34 + 12, 300))
+            }
+
+            Text("URLs containing the text open in that rule's browser; the first enabled match from the top wins (drag to reorder). `*` matches anything, `|` separates alternatives, e.g. `github.com/*/pull | gitlab.com`.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider()
+
+            HStack {
                 if store.isDefault {
                     Label("Browser Swap is the default browser", systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.green)
@@ -118,9 +188,45 @@ struct ContentView: View {
             }
         }
         .padding(20)
-        .frame(width: 380)
+        .frame(width: 600)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             store.updateIsDefault()
+        }
+    }
+}
+
+struct RuleRow: View {
+    @Binding var rule: Rule
+    let browsers: [Browser]
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack {
+            Toggle("", isOn: $rule.enabled)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
+            Group {
+                TextField("e.g. github.com/*/pull | gitlab.com", text: $rule.pattern)
+                    .textFieldStyle(.roundedBorder)
+                Picker("", selection: $rule.browserID) {
+                    ForEach(browsers) { b in
+                        Label { Text(b.name) } icon: { Image(nsImage: b.icon) }
+                            .tag(Optional(b.bundleID))
+                    }
+                    if let id = rule.browserID, !browsers.contains(where: { $0.bundleID == id }) {
+                        Text("\(id) (not installed)").tag(Optional(id))
+                    }
+                }
+                .labelsHidden()
+                .frame(width: 150)
+            }
+            .opacity(rule.enabled ? 1 : 0.5)
+            Button(action: onDelete) {
+                Image(systemName: "minus.circle.fill")
+            }
+            .buttonStyle(.borderless)
+            .help("Delete rule")
         }
     }
 }
